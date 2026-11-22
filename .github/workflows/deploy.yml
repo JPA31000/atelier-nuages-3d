@@ -30,6 +30,15 @@ jobs:
         run: npm test
       - name: Compilation (site 100 % statique dans dist/)
         run: npm run build
+      # Si Pages est réglé sur « Deploy from a branch », GitHub publie en plus le code brut de la branche
+      # (build Jekyll) et écrase ce site compilé. On bascule donc la source sur « GitHub Actions ».
+      # Sans effet si c'est déjà le cas ; en cas de refus, un avertissement indique le réglage à faire à la main.
+      - name: Source de Pages = GitHub Actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow \
+            || echo "::warning title=Réglage de Pages::Impossible de régler la source automatiquement. Faites-le à la main : Settings → Pages → Build and deployment → Source : GitHub Actions."
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
