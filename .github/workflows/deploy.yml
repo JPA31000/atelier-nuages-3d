@@ -1,5 +1,11 @@
 # Publie automatiquement l'application sur GitHub Pages à chaque « push » sur la branche main.
-# Réglage unique à faire une fois dans le dépôt :  Settings → Pages → Build and deployment → Source : « GitHub Actions ».
+#
+# Réglage recommandé (une seule fois) : Settings → Pages → Build and deployment → Source : « GitHub Actions ».
+#
+# Si la source de Pages est restée sur « Deploy from a branch », GitHub lance en plus, à chaque push, son propre
+# déploiement du code BRUT de la branche (build Jekyll) : il écrase ce site compilé s'il se termine après lui.
+# L'étape « Attendre… » ci-dessous fait donc passer notre déploiement APRÈS celui-là : le site compilé a toujours
+# le dernier mot, quel que soit le réglage. (Avec « GitHub Actions », ce déploiement n'existe pas : l'attente est brève.)
 name: Déployer sur GitHub Pages
 
 on:
@@ -30,21 +36,6 @@ jobs:
         run: npm test
       - name: Compilation (site 100 % statique dans dist/)
         run: npm run build
-      # Si Pages est réglé sur « Deploy from a branch », GitHub publie en plus le code brut de la branche
-      # (build Jekyll) et écrase ce site compilé. On bascule donc la source sur « GitHub Actions ».
-      # Sans effet si c'est déjà le cas ; en cas de refus, un avertissement indique le réglage à faire à la main.
-      - name: Source de Pages = GitHub Actions
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set +e
-          out=$(gh api -X PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow 2>&1); code=$?
-          echo "::notice title=Pages PUT::code=${code} $(echo "$out" | tr '\n' ' ' | cut -c1-300)"
-          cur=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '"build_type=" + .build_type + " branche=" + (.source.branch // "-") + " dossier=" + (.source.path // "-")' 2>&1 | tr '\n' ' ' | cut -c1-300)
-          echo "::notice title=Pages actuel::${cur}"
-          case "$cur" in *build_type=workflow*) ;; *)
-            echo "::warning title=Réglage de Pages::La source n'est pas « GitHub Actions ». Faites-le à la main : Settings → Pages → Build and deployment → Source : GitHub Actions." ;;
-          esac
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -53,9 +44,25 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      actions: read
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Attendre la fin du déploiement « branche » de GitHub, s'il existe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 60); do
+            st=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${GITHUB_SHA}&per_page=30" \
+              --jq '[.workflow_runs[] | select(.path == "dynamic/pages/pages-build-deployment")][0].status // "absent"')
+            echo "tentative ${i} : déploiement de la branche = ${st}"
+            [ "${st}" = "completed" ] && break
+            [ "${st}" = "absent" ] && [ "${i}" -ge 4 ] && break
+            sleep 8
+          done
       - id: deployment
         uses: actions/deploy-pages@v4
