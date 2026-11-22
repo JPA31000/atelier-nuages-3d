@@ -45,6 +45,8 @@ Les jeux d'essai sont **générés** par [`scripts/make-samples.mjs`](scripts/ma
 3. Chaque `push` sur `main` déclenche [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), qui exécute `npm ci`, `npm test`, `npm run build` puis publie `dist/`.
 4. L'adresse est `https://<compte>.github.io/<depot>/`.
 
+**Si Pages est resté sur « Deploy from a branch »** (réglage par défaut quand on active Pages sans choisir) : GitHub publie en plus, à chaque push, le code *brut* de la branche (build Jekyll), qui peut écraser le site compilé et donner une page blanche (erreur 404 sur `/src/main.js`). Le workflow en tient compte : son job `deploy` **attend la fin de ce déploiement** avant de publier la version compilée, qui a donc toujours le dernier mot. Pendant la minute que dure un déploiement, le site peut brièvement afficher l'ancienne ou la mauvaise version. Le réglage « GitHub Actions » reste la bonne configuration : il supprime ce déploiement parasite.
+
 Le site est configuré avec une **base relative** (`base: './'` dans [`vite.config.js`](vite.config.js)) : il fonctionne tel quel dans un sous-dossier de GitHub Pages, sans réglage. Les Web Workers et le module WebAssembly sont des fichiers statiques du dossier `dist/assets/`.
 
 ## Formats pris en charge
