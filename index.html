@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atelier Nuages 3D</title>
+  <meta name="description" content="Importer, visualiser, assembler, nettoyer et exporter des nuages de points (LAS, LAZ, E57, PLY, XYZ) avec leurs panoramiques 360°, directement dans le navigateur." />
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2"/><g fill="currentColor"><circle cx="9" cy="19" r="1.6"/><circle cx="13" cy="14" r="1.6"/><circle cx="17" cy="20" r="1.6"/><circle cx="21" cy="12" r="1.6"/><circle cx="23" cy="18" r="1.6"/><circle cx="15" cy="9" r="1.6"/></g></svg>
+      <span class="brand-name">Atelier Nuages 3D</span>
+      <span class="brand-sub">nuages de points &amp; panoramiques 360°</span>
+    </div>
+    <div class="top-actions">
+      <button id="btn-import" class="btn primary" title="Choisir des fichiers (ou les glisser sur la fenêtre)">Importer…</button>
+      <button id="btn-demo" class="btn" title="Génère une salle scannée depuis 2 stations (rien à télécharger)">Jeu de démonstration</button>
+      <button id="btn-capture" class="btn ghost" title="Enregistrer une image de la vue">Capture</button>
+      <button id="btn-help" class="btn ghost">Aide</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <nav class="rail" aria-label="Outils">
+      <button class="rail-btn active" data-tab="scene"><span class="ico">◧</span><span>Scène</span></button>
+      <button class="rail-btn" data-tab="display"><span class="ico">◐</span><span>Affichage</span></button>
+      <button class="rail-btn" data-tab="measure"><span class="ico">↔</span><span>Mesure</span></button>
+      <button class="rail-btn" data-tab="register"><span class="ico">⇄</span><span>Recalage</span></button>
+      <button class="rail-btn" data-tab="clean"><span class="ico">✦</span><span>Nettoyage</span></button>
+      <button class="rail-btn" data-tab="export"><span class="ico">⇩</span><span>Export</span></button>
+    </nav>
+
+    <aside class="panel">
+      <!-- ============ SCÈNE ============ -->
+      <section class="tab active" id="tab-scene">
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Déposer ou choisir des fichiers">
+          <strong>Glissez vos fichiers ici</strong>
+          <span>ou cliquez pour choisir</span>
+          <div class="chips"><i>LAS</i><i>LAZ</i><i>E57</i><i>PLY</i><i>XYZ / PTS</i><i>JPG / PNG 360°</i></div>
+        </div>
+        <label class="field inline">
+          <span>Budget de points par fichier</span>
+          <select id="import-budget">
+            <option value="1000000">1 million</option>
+            <option value="2000000">2 millions</option>
+            <option value="5000000" selected>5 millions</option>
+            <option value="10000000">10 millions</option>
+            <option value="20000000">20 millions (PC puissant)</option>
+          </select>
+        </label>
+        <p class="hint">Au-delà du budget, les points sont tirés au hasard (échantillon uniforme) pour que votre navigateur reste fluide. Tout est traité sur votre machine : rien n'est envoyé sur internet.</p>
+
+        <h3>Fichiers importés</h3>
+        <div id="files-list" class="cards"><p class="empty">Aucun fichier pour l'instant.</p></div>
+
+        <h3>Nuages de points</h3>
+        <div id="clouds-list" class="rows"><p class="empty">Aucun nuage.</p></div>
+
+        <h3>Stations de scan <button class="mini" id="btn-add-station" title="Cliquer dans le nuage pour placer une station">+ placer une station</button></h3>
+        <div id="stations-list" class="rows"><p class="empty">Aucune station.</p></div>
+
+        <h3>Panoramiques 360°</h3>
+        <div id="panos-list" class="cards"><p class="empty">Aucun panoramique. Glissez des JPG/PNG équirectangulaires, ou importez un E57 qui en contient.</p></div>
+      </section>
+
+      <!-- ============ AFFICHAGE ============ -->
+      <section class="tab" id="tab-display">
+        <h3>Couleur des points</h3>
+        <div class="seg" id="color-mode">
+          <label><input type="radio" name="cmode" value="rgb" checked /><span>RVB</span></label>
+          <label><input type="radio" name="cmode" value="elevation" /><span>Élévation (Z)</span></label>
+          <label><input type="radio" name="cmode" value="intensity" /><span>Intensité</span></label>
+          <label><input type="radio" name="cmode" value="cloud" /><span>Par nuage</span></label>
+        </div>
+        <div class="legend" id="legend-z" hidden><span id="legend-zmin">0</span><i></i><span id="legend-zmax">1</span></div>
+
+        <h3>Points</h3>
+        <label class="field"><span>Taille <b id="size-val">2.5 px</b></span><input type="range" id="point-size" min="1" max="10" step="0.5" value="2.5" /></label>
+        <label class="check"><input type="checkbox" id="size-adaptive" /> Taille adaptée à la distance (en cm)</label>
+        <label class="field"><span>Points affichés (max) <b id="budget-val">4 M</b></span><input type="range" id="draw-budget" min="0.2" max="20" step="0.1" value="4" /></label>
+        <p class="hint">Diminuez si l'affichage est saccadé : l'image reste représentative car les points sont mélangés.</p>
+
+        <h3>Scène</h3>
+        <label class="field inline"><span>Fond</span><input type="color" id="bg-color" value="#14181d" /></label>
+        <label class="check"><input type="checkbox" id="show-grid" checked /> Grille et axes</label>
+        <div class="btn-row">
+          <button class="btn" id="btn-fit">Cadrer tout</button>
+          <button class="btn" data-view="top">Dessus</button>
+          <button class="btn" data-view="front">Face</button>
+          <button class="btn" data-view="right">Droite</button>
+          <button class="btn" data-view="left">Gauche</button>
+        </div>
+        <h3>Repère</h3>
+        <p class="hint" id="origin-info">Origine de la scène : —</p>
+      </section>
+
+      <!-- ============ MESURE ============ -->
+      <section class="tab" id="tab-measure">
+        <button class="btn primary wide" id="btn-measure">Mesurer deux points</button>
+        <p class="hint">Cliquez deux points, <b>dans la vue 3D</b> ou <b>dans le panoramique 360°</b> (cliquez une station d'abord). Dans le panoramique, le point est cherché dans le nuage le long de la direction visée. <kbd>Échap</kbd> pour terminer.</p>
+        <div class="btn-row">
+          <button class="btn" id="btn-measure-csv">Copier en CSV</button>
+          <button class="btn" id="btn-measure-clear">Tout effacer</button>
+        </div>
+        <div id="measure-list" class="cards"><p class="empty">Aucune mesure.</p></div>
+      </section>
+
+      <!-- ============ RECALAGE ============ -->
+      <section class="tab" id="tab-register">
+        <p class="hint">Assembler deux scans : on déplace le nuage <b>source</b> pour qu'il se superpose au nuage <b>cible</b> (qui ne bouge pas).</p>
+        <div class="grid2">
+          <label class="field"><span>Source (déplacé)</span><select id="reg-source"></select></label>
+          <label class="field"><span>Cible (fixe)</span><select id="reg-target"></select></label>
+        </div>
+
+        <h3>1 · Pré-alignement manuel</h3>
+        <div class="btn-row">
+          <label class="check"><input type="checkbox" id="gizmo-on" /> Déplacer à la souris</label>
+          <div class="seg small" id="gizmo-mode">
+            <label><input type="radio" name="gmode" value="translate" checked /><span>Translation</span></label>
+            <label><input type="radio" name="gmode" value="rotate" /><span>Rotation</span></label>
+          </div>
+        </div>
+        <div class="grid3">
+          <label class="field"><span>ΔX (m)</span><input type="number" step="0.01" id="mv-dx" value="0" /></label>
+          <label class="field"><span>ΔY (m)</span><input type="number" step="0.01" id="mv-dy" value="0" /></label>
+          <label class="field"><span>ΔZ (m)</span><input type="number" step="0.01" id="mv-dz" value="0" /></label>
+          <label class="field"><span>Rot. X (°)</span><input type="number" step="0.1" id="mv-rx" value="0" /></label>
+          <label class="field"><span>Rot. Y (°)</span><input type="number" step="0.1" id="mv-ry" value="0" /></label>
+          <label class="field"><span>Rot. Z (°)</span><input type="number" step="0.1" id="mv-rz" value="0" /></label>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btn-move-apply">Appliquer</button>
+          <button class="btn" id="btn-move-undo">Annuler le dernier</button>
+          <button class="btn" id="btn-move-reset">Position d'origine</button>
+        </div>
+
+        <h3>2 · Points homologues <small>(facultatif)</small></h3>
+        <p class="hint">Cliquez un point reconnaissable sur la source, puis le même point sur la cible. Au moins 3 paires bien réparties.</p>
+        <div class="btn-row">
+          <button class="btn" id="btn-pair-add">Ajouter une paire</button>
+          <button class="btn" id="btn-pair-solve">Calculer</button>
+          <button class="btn" id="btn-pair-clear">Effacer</button>
+        </div>
+        <p class="hint" id="pair-info">0 paire.</p>
+
+        <h3>3 · Recalage fin ICP</h3>
+        <div class="grid3">
+          <label class="field"><span>Itérations</span><input type="number" id="icp-iter" min="1" max="500" value="50" /></label>
+          <label class="field"><span>Dist. max (m)</span><input type="number" id="icp-dist" min="0.01" step="0.05" value="1" /></label>
+          <label class="field"><span>Recouvrement (%)</span><input type="number" id="icp-overlap" min="10" max="100" value="80" /></label>
+        </div>
+        <label class="field"><span>Points source utilisés <b id="icp-n-val">30 000</b></span><input type="range" id="icp-n" min="2000" max="100000" step="1000" value="30000" /></label>
+        <button class="btn primary wide" id="btn-icp">Lancer l'ICP</button>
+        <div class="result" id="icp-result" hidden>
+          <div><b>RMSE</b> <span id="icp-rmse">—</span> <small id="icp-detail"></small></div>
+          <canvas id="icp-chart" width="300" height="70"></canvas>
+        </div>
+        <p class="hint">Le RMSE est l'écart moyen quadratique entre points appariés ; il ne peut pas descendre sous l'espacement des points. Sous-échantillonnez par voxels (onglet Nettoyage) pour comparer des densités équivalentes.</p>
+      </section>
+
+      <!-- ============ NETTOYAGE ============ -->
+      <section class="tab" id="tab-clean">
+        <label class="field"><span>Nuage à nettoyer</span><select id="clean-target"></select></label>
+
+        <h3>Points aberrants — statistique</h3>
+        <div class="grid2">
+          <label class="field"><span>Voisins (k)</span><input type="number" id="sor-k" min="3" max="64" value="12" /></label>
+          <label class="field"><span>Seuil (× écart-type)</span><input type="number" id="sor-std" min="0.2" max="6" step="0.1" value="2" /></label>
+        </div>
+        <button class="btn" id="btn-sor">Retirer les aberrants</button>
+
+        <h3>Points aberrants — par rayon</h3>
+        <div class="grid2">
+          <label class="field"><span>Rayon (m)</span><input type="number" id="ror-r" min="0.005" step="0.01" value="0.10" /></label>
+          <label class="field"><span>Voisins min.</span><input type="number" id="ror-n" min="1" max="100" value="5" /></label>
+        </div>
+        <button class="btn" id="btn-ror">Retirer les isolés</button>
+
+        <h3>Découpe par boîte</h3>
+        <div class="grid3">
+          <label class="field"><span>X min</span><input type="number" step="0.01" id="clip-xmin" /></label>
+          <label class="field"><span>Y min</span><input type="number" step="0.01" id="clip-ymin" /></label>
+          <label class="field"><span>Z min</span><input type="number" step="0.01" id="clip-zmin" /></label>
+          <label class="field"><span>X max</span><input type="number" step="0.01" id="clip-xmax" /></label>
+          <label class="field"><span>Y max</span><input type="number" step="0.01" id="clip-ymax" /></label>
+          <label class="field"><span>Z max</span><input type="number" step="0.01" id="clip-zmax" /></label>
+        </div>
+        <div class="btn-row">
+          <div class="seg small" id="clip-mode">
+            <label><input type="radio" name="clipm" value="inside" checked /><span>Garder l'intérieur</span></label>
+            <label><input type="radio" name="clipm" value="outside" /><span>Garder l'extérieur</span></label>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="btn-clip-fill">Étendue du nuage</button>
+          <button class="btn" id="btn-clip-shrink">Rétrécir de 10 %</button>
+          <button class="btn" id="btn-clip">Découper</button>
+        </div>
+        <p class="hint">Coordonnées brutes (celles du fichier). La boîte s'affiche en 3D pendant que vous la modifiez.</p>
+
+        <h3>Sous-échantillonnage (voxels)</h3>
+        <div class="grid2">
+          <label class="field"><span>Taille du voxel (cm)</span><input type="number" id="vox-size" min="0.1" step="0.5" value="5" /></label>
+          <label class="field"><span>Point retenu</span><select id="vox-mode"><option value="centroid">Centre de gravité</option><option value="first">Premier point</option></select></label>
+        </div>
+        <button class="btn" id="btn-voxel">Sous-échantillonner</button>
+
+        <div class="btn-row sep">
+          <button class="btn" id="btn-clean-undo">Annuler la dernière opération</button>
+        </div>
+        <p class="hint" id="clean-info"></p>
+      </section>
+
+      <!-- ============ EXPORT ============ -->
+      <section class="tab" id="tab-export">
+        <h3>Consolidation</h3>
+        <p class="hint">Fusionne les nuages visibles (recalages appliqués) en un nuage final unique.</p>
+        <label class="check"><input type="checkbox" id="merge-hide" checked /> Masquer les nuages d'origine</label>
+        <button class="btn" id="btn-merge">Fusionner les nuages visibles</button>
+
+        <h3>Exporter</h3>
+        <label class="field"><span>Quoi</span>
+          <select id="exp-scope"><option value="visible">Nuages visibles (fusionnés à l'export)</option><option value="selected">Nuage sélectionné seulement</option></select></label>
+        <label class="field"><span>Nom du projet</span><input type="text" id="exp-name" value="nuage" /></label>
+        <label class="field"><span>Format</span>
+          <select id="exp-format">
+            <option value="las">LAS 1.2 — standard ouvert</option>
+            <option value="laz">LAZ — LAS compressé (3 à 6× plus petit)</option>
+            <option value="ply">PLY — Stanford (binaire)</option>
+            <option value="xyz">XYZ — texte (X Y Z R G B I)</option>
+            <option value="rcp">Paquet .rcp — pour ReCap / Revit</option>
+          </select></label>
+        <div id="exp-opt-las" class="grid2">
+          <label class="field"><span>Précision LAS</span><select id="exp-scale"><option value="0.001">1 mm</option><option value="0.0001">0,1 mm</option><option value="0.01">1 cm</option></select></label>
+        </div>
+        <div id="exp-opt-ply" class="grid2" hidden>
+          <label class="check"><input type="checkbox" id="exp-ascii" /> PLY en texte (ASCII)</label>
+        </div>
+        <div id="exp-opt-xyz" class="grid2" hidden>
+          <label class="field"><span>Décimales</span><input type="number" id="exp-decimals" min="0" max="8" value="3" /></label>
+        </div>
+        <p class="hint" id="exp-summary"></p>
+        <button class="btn primary wide" id="btn-export">Exporter</button>
+
+        <details class="note" id="rcp-note">
+          <summary>À savoir sur l'export .rcp (ReCap)</summary>
+          <p>Un vrai fichier ReCap (<code>.rcp</code> + dossier <code>.rcs</code>) est un <b>index propriétaire Autodesk</b> : seul ReCap peut l'écrire. Aucune application web ne le peut.</p>
+          <p>Le « paquet .rcp » produit ici est une archive ZIP contenant un <b>manifeste de projet</b> (<code>.rcp</code>, texte XML), les <b>scans en LAS</b>, les <b>panoramiques</b> et un fichier <code>stations.csv</code>, plus un <code>README_RCP.txt</code>.</p>
+          <p>Pour obtenir l'index natif : ouvrir ReCap Pro → nouveau projet → ajouter les LAS → <i>Indexer</i> → insérer le <code>.rcp</code> dans Revit.</p>
+        </details>
+      </section>
+    </aside>
+
+    <main class="viewport" id="viewport">
+      <div class="views" id="views" data-layout="3d">
+        <canvas id="gl"></canvas>
+        <div class="slot slot3d" id="slot3d"><div class="labels" id="labels3d"></div><span class="slot-tag">Vue 3D</span></div>
+        <div class="slot slotpano" id="slotPano" hidden><div class="labels" id="labelsPano"></div><span class="slot-tag">Panoramique 360°</span></div>
+        <div class="tooltip" id="tooltip" hidden></div>
+        <div class="empty-hint" id="empty-hint">
+          <h2>Bienvenue 👋</h2>
+          <p>Glissez-déposez un fichier <b>LAS, LAZ, E57, PLY ou XYZ</b> sur la fenêtre,<br />ou lancez le <b>jeu de démonstration</b> pour tout essayer sans fichier.</p>
+        </div>
+      </div>
+
+      <div class="station-bar" id="station-bar" hidden>
+        <b id="sb-name">Station</b>
+        <div class="seg small" id="sb-layout">
+          <label><input type="radio" name="layout" value="3d" /><span>3D</span></label>
+          <label><input type="radio" name="layout" value="split" checked /><span>3D + 360°</span></label>
+          <label><input type="radio" name="layout" value="pano" /><span>360°</span></label>
+        </div>
+        <label class="check" title="La vue 3D se place à la station et suit le panoramique"><input type="checkbox" id="sb-sync" checked /> Synchroniser</label>
+        <label class="check" title="Affiche les points du nuage par-dessus l'image"><input type="checkbox" id="sb-overlay" /> Superposer le nuage</label>
+        <input type="range" id="sb-opacity" min="0.1" max="1" step="0.05" value="0.55" title="Opacité du nuage" />
+        <details class="calage">
+          <summary>Caler l'image</summary>
+          <label class="field"><span>Rotation de l'image <b id="sb-yaw-val">0°</b></span><input type="range" id="sb-yaw" min="-180" max="180" step="0.5" value="0" /></label>
+          <label class="check"><input type="checkbox" id="sb-flip" /> Miroir gauche/droite</label>
+        </details>
+        <button class="btn small" id="sb-exit">Quitter la station</button>
+      </div>
+
+      <div class="picker-banner" id="picker-banner" hidden></div>
+      <div class="statusbar" id="statusbar"><span id="st-points">0 point</span><span id="st-fps"></span><span id="st-info"></span></div>
+      <div class="drop-overlay" id="drop-overlay" hidden><div>Déposez vos fichiers pour les importer</div></div>
+      <div class="progress" id="progress" hidden>
+        <div class="progress-label" id="progress-label">…</div>
+        <div class="bar"><i id="progress-bar"></i></div>
+        <button class="btn small" id="progress-cancel">Annuler</button>
+      </div>
+      <div class="toasts" id="toasts" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <input type="file" id="file-input" multiple hidden accept=".las,.laz,.e57,.ply,.xyz,.pts,.txt,.csv,.asc,.jpg,.jpeg,.png,.webp" />
+
+  <dialog id="help-dialog">
+    <form method="dialog">
+      <h2>Prise en main</h2>
+      <ol class="steps">
+        <li><b>Importer</b> : glissez vos fichiers (LAS, LAZ, E57, PLY, XYZ/PTS) et, si besoin, vos panoramiques JPG/PNG.</li>
+        <li><b>Naviguer</b> : clic gauche = tourner, clic droit = déplacer, molette = zoom, double-clic = recentrer.</li>
+        <li><b>Stations</b> : cliquez une icône <span class="pill">360</span> dans la scène pour voir le panoramique ; cliquez une autre station pour y aller.</li>
+        <li><b>Mesurer</b> : onglet Mesure → deux clics, en 3D <i>ou</i> dans le panoramique.</li>
+        <li><b>Assembler</b> : onglet Recalage → pré-alignement manuel, puis ICP.</li>
+        <li><b>Nettoyer</b> puis <b>Exporter</b> en LAS, LAZ, PLY, XYZ ou paquet .rcp.</li>
+      </ol>
+      <h3>Raccourcis</h3>
+      <p><kbd>M</kbd> mesurer · <kbd>F</kbd> cadrer · <kbd>G</kbd> grille · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> vue 3D / 3D+360° / 360° · <kbd>Échap</kbd> quitter l'outil ou la station</p>
+      <h3>E57 « structuré » ou « non structuré » ?</h3>
+      <p><b>Structuré</b> : plusieurs scans avec leur position de station (et souvent une grille ligne/colonne et des panoramiques). <b>Non structuré</b> : un nuage global, sans station. L'application l'indique à l'import.</p>
+      <h3>Confidentialité</h3>
+      <p>Vos fichiers ne quittent jamais votre ordinateur : tout est calculé dans le navigateur.</p>
+      <menu><button class="btn primary" value="close">Fermer</button></menu>
+    </form>
+  </dialog>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
