@@ -19,11 +19,24 @@ npm install        # installe three, laz-perf (décompression LAZ en WebAssembly
 npm run dev        # serveur de développement : http://localhost:5173
 npm run build      # site statique prêt à publier dans dist/
 npm run preview    # sert dist/ pour vérifier la version de production
-npm test           # tests automatiques (lecteurs, écrivains, LAZ, ICP, filtres, démo)
+npm test           # tests automatiques (lecteurs, écrivains, LAZ, ICP, filtres, démo, jeux d'essai)
+npm run samples    # (re)génère les jeux d'essai de public/exemples/ — lancé tout seul avant dev et build
 ```
 
 Navigateur : navigateur récent avec **WebGL 2** et Web Workers « module » (Chrome, Edge, Firefox ≥ 114, Safari ≥ 16.4) et accélération matérielle activée. Les essais ont été faits dans un navigateur Chromium.
 Le rendu utilise WebGL 2 ; WebGPU n'est pas utilisé (voir [limites](#limites-connues)).
+
+## Page d'accueil et jeux d'essai
+
+Au lancement s'ouvre une **fenêtre d'accueil** (même esprit que l'écran de démarrage de Model Educ Studio : présentation à gauche, actions à droite). Elle propose :
+
+* **Commencer** : importer ses fichiers, ou ouvrir l'atelier vide ;
+* **Ouvrir un exemple** : la salle de démonstration (2 stations, 2 panoramiques, défaut de recalage à corriger) ;
+* **Télécharger** : deux **jeux d'essai** à importer ensuite (un **E57 structuré** avec 2 stations et 2 panoramiques PNG intégrés, un **LAZ** fusionné) et le **code source (ZIP)**.
+
+Le bouton **Accueil** de la barre du haut la rouvre. Un lien se terminant par **`?demo`** (`…/atelier-nuages-3d/?demo`) saute l'accueil et lance directement la démonstration : pratique pour une consigne de cours.
+
+Les jeux d'essai sont **générés** par [`scripts/make-samples.mjs`](scripts/make-samples.mjs) dans `public/exemples/` (avant `npm run dev` et `npm run build`, donc aussi par le workflow GitHub) ; ils ne sont pas versionnés. Le E57 est écrit par le générateur du projet ([`src/io/e57Writer.js`](src/io/e57Writer.js)) : il est relu par l'application (test automatique), mais n'a pas été essayé dans d'autres logiciels.
 
 ## Publier sur GitHub Pages
 
@@ -115,6 +128,7 @@ src/viewer/                        Three.js (WebGL2) : scène unique rendue dans
 src/io/                            lecteurs (las, e57, ply, xyz), écrivains (las, laz, ply, xyz, zip, rcp), worker d'import
 src/geo/                           KD-tree, Horn, ICP, filtres + worker de calcul (ICP, filtres, exports)
 src/demo/demoScene.js              jeu de démonstration (lancer de rayons)
+scripts/make-samples.mjs            génère les jeux d'essai E57 + LAZ téléchargeables (public/exemples/)
 tests/                             tests Node (node:test) avec générateur E57 de test
 ```
 
@@ -124,7 +138,7 @@ tests/                             tests Node (node:test) avec générateur E57 
 
 ## Tests et ce qui n'est pas vérifié
 
-`npm test` (29 tests) vérifie : lecture/écriture de LAS, PLY (3 encodages), XYZ, PTS, E57 (scans multiples, poses, couleurs, intensité, coordonnées sphériques, panoramique intégré, flux d'octets à cheval entre paquets), **LAZ relu par le décodeur laz-perf**, KD-tree contre force brute, Horn, ICP (retrouve 2,5° et ≈ 14 cm), filtres, boîte de découpe, voxels, jeu de démonstration. L'application a aussi été exercée dans un navigateur (import/export de tous les formats par les Workers, panoramique, mesure, gizmo, ICP, nettoyage).
+`npm test` (31 tests) vérifie : lecture/écriture de LAS, PLY (3 encodages), XYZ, PTS, E57 (scans multiples, poses, couleurs, intensité, coordonnées sphériques, panoramique intégré, flux d'octets à cheval entre paquets), **LAZ relu par le décodeur laz-perf**, KD-tree contre force brute, Horn, ICP (retrouve 2,5° et ≈ 14 cm), filtres, boîte de découpe, voxels, jeu de démonstration. L'application a aussi été exercée dans un navigateur (import/export de tous les formats par les Workers, panoramique, mesure, gizmo, ICP, nettoyage).
 
 **Non vérifié** — à tester avec de vrais fichiers :
 * le lecteur **E57** n'a été éprouvé que sur des fichiers produits par le générateur de test du projet (écrit d'après la norme ASTM E2807), **pas sur des fichiers réels** Leica / Faro / Trimble / Riegl ; la convention d'orientation des panoramiques est la plus courante mais non confirmée sur tous les constructeurs (d'où la rotation et le miroir) ;

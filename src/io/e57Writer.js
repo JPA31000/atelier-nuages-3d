@@ -1,4 +1,4 @@
-// Générateur E57 pour les tests (et pour l'export éventuel) : pages de 1024 o avec CRC32C,
+// Générateur E57 (jeux d'essai téléchargeables et tests) : pages de 1024 o avec CRC32C,
 // sections binaires de paquets de données, XML final, blobs d'images.
 // Les flux d'octets sont volontairement coupés à des positions d'octets arbitraires
 // (valeurs à cheval entre deux paquets, champs de progression inégale) pour éprouver le lecteur.
@@ -35,6 +35,8 @@ function packBits(values, bits) {
   return out.subarray(0, Math.ceil((values.length * bits) / 8));
 }
 
+const minOf = (a) => { let m = Infinity; for (let i = 0; i < a.length; i++) if (a[i] < m) m = a[i]; return m; };
+const maxOf = (a) => { let m = -Infinity; for (let i = 0; i < a.length; i++) if (a[i] > m) m = a[i]; return m; };
 const f32 = (arr) => { const b = new Uint8Array(arr.length * 4); const dv = new DataView(b.buffer); arr.forEach((v, i) => dv.setFloat32(i * 4, v, true)); return b; };
 const f64 = (arr) => { const b = new Uint8Array(arr.length * 8); const dv = new DataView(b.buffer); arr.forEach((v, i) => dv.setFloat64(i * 8, v, true)); return b; };
 
@@ -45,11 +47,11 @@ function encodeScan(sc) {
   const scaled = sc.encoding !== 'float';
   const mkCoord = (name, arr) => {
     if (!scaled) {
-      return { name, xml: `<${name} type="Float" precision="single" minimum="${Math.min(...arr)}" maximum="${Math.max(...arr)}"/>`, stream: f32(arr), unit: 32 };
+      return { name, xml: `<${name} type="Float" precision="single" minimum="${minOf(arr)}" maximum="${maxOf(arr)}"/>`, stream: f32(arr), unit: 32 };
     }
     const scale = 0.0005;
     const ints = Array.from(arr, (v) => Math.round(v / scale));
-    const mn = Math.min(...ints), mx = Math.max(...ints);
+    const mn = minOf(ints), mx = maxOf(ints);
     const bits = Math.max(1, Math.ceil(Math.log2(mx - mn + 1)));
     return { name, xml: `<${name} type="ScaledInteger" minimum="${mn}" maximum="${mx}" scale="${scale}" offset="0"/>`, stream: packBits(ints.map((v) => v - mn), bits), unit: bits };
   };
@@ -113,7 +115,7 @@ function buildPackets(enc, recordsPerPacket) {
 /**
  * @param {{scans: Array, images?: Array}} spec
  * scans[i] = {name, guid, pose?:{q:[w,x,y,z], t:[x,y,z]}, points:{x,y,z,r?,g?,b?,intensity?}, encoding?:'scaled'|'float', spherical?:bool, recordsPerPacket?:number}
- * images[i] = {name, scanGuid, bytes:Uint8Array, width, height, pose?}
+ * images[i] = {name, scanGuid, bytes:Uint8Array, width, height, type?:'jpeg'|'png', pose?}
  */
 export function buildE57({ scans, images = [] }) {
   const chunks = []; // {logical, bytes}
@@ -163,7 +165,7 @@ export function buildE57({ scans, images = [] }) {
   xml += `</data3D>\n<images2D type="Vector" allowHeterogeneousChildren="1">\n`;
   for (const ii of imageInfo) {
     const im = ii.im;
-    xml += `<vectorChild type="Structure"><guid type="String"><![CDATA[${im.name}-guid]]></guid><name type="String"><![CDATA[${im.name}]]></name><associatedData3DGuid type="String"><![CDATA[${im.scanGuid}]]></associatedData3DGuid>${poseXml(im.pose)}<sphericalRepresentation type="Structure"><jpegImage type="Blob" fileOffset="${ii.fileOffset}" length="${im.bytes.length}"/><imageWidth type="Integer">${im.width}</imageWidth><imageHeight type="Integer">${im.height}</imageHeight><pixelWidth type="Float">${(2 * Math.PI) / im.width}</pixelWidth><pixelHeight type="Float">${Math.PI / im.height}</pixelHeight></sphericalRepresentation></vectorChild>\n`;
+    xml += `<vectorChild type="Structure"><guid type="String"><![CDATA[${im.name}-guid]]></guid><name type="String"><![CDATA[${im.name}]]></name><associatedData3DGuid type="String"><![CDATA[${im.scanGuid}]]></associatedData3DGuid>${poseXml(im.pose)}<sphericalRepresentation type="Structure"><${im.type === 'png' ? 'pngImage' : 'jpegImage'} type="Blob" fileOffset="${ii.fileOffset}" length="${im.bytes.length}"/><imageWidth type="Integer">${im.width}</imageWidth><imageHeight type="Integer">${im.height}</imageHeight><pixelWidth type="Float">${(2 * Math.PI) / im.width}</pixelWidth><pixelHeight type="Float">${Math.PI / im.height}</pixelHeight></sphericalRepresentation></vectorChild>\n`;
   }
   xml += `</images2D>\n</e57Root>\n`;
   const xmlBytes = new TextEncoder().encode(xml);

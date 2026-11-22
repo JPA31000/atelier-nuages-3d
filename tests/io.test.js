@@ -5,7 +5,7 @@ import { parseNumbers } from '../src/io/textreader.js';
 import { importFile } from '../src/io/importFile.js';
 import { makeExportSource } from '../src/io/exportSource.js';
 import { writeLas, writePly, writeXyz, concatParts } from '../src/io/writers.js';
-import { buildE57 } from './helpers/e57Writer.js';
+import { buildE57 } from '../src/io/e57Writer.js';
 import { roomPoints } from './helpers/synth.js';
 
 const mkFile = (bytes, name) => new File([bytes], name);

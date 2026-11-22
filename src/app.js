@@ -30,6 +30,7 @@ export class App {
     this._bindLists();
     this._bindDisplay();
     this._bindStationBar();
+    this._bindWelcome();
     this.store.on('clouds', () => { this.viewer.syncClouds(); this._cloudsChanged(); });
     this.store.on('stations', () => { this.viewer.syncStations(); this.renderStations(); this.renderPanos(); });
     this.store.on('panos', () => { this.renderPanos(); this.renderStations(); this.viewer.syncStations(); });
@@ -491,6 +492,20 @@ export class App {
       $('#st-points').textContent = `${fmtInt(s.drawn)} / ${fmtInt(total)} points affichés`;
       $('#st-fps').textContent = `${s.fps} i/s`;
     });
+  }
+
+  // ------------------------------------------------------------------ accueil
+
+  /** Fenêtre d'accueil au démarrage ; `?demo` dans l'adresse lance directement la démonstration (lien pour la classe). */
+  _bindWelcome() {
+    const dlg = $('#welcome');
+    const done = (fn) => () => { if (dlg.open) dlg.close(); fn?.(); };
+    $('#w-import').addEventListener('click', done(() => $('#file-input').click()));
+    $('#w-empty').addEventListener('click', done());
+    $('#w-demo').addEventListener('click', done(() => this.loadDemo()));
+    $('#btn-home').addEventListener('click', () => { if (!dlg.open) dlg.showModal(); });
+    if (new URLSearchParams(location.search).has('demo')) this.loadDemo();
+    else dlg.showModal();
   }
 
   // ------------------------------------------------------------------ barre de station

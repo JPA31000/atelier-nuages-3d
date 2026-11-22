@@ -18,6 +18,7 @@
     <div class="top-actions">
       <button id="btn-import" class="btn primary" title="Choisir des fichiers (ou les glisser sur la fenêtre)">Importer…</button>
       <button id="btn-demo" class="btn" title="Génère une salle scannée depuis 2 stations (rien à télécharger)">Jeu de démonstration</button>
+      <button id="btn-home" class="btn ghost" title="Revenir à la fenêtre d'accueil">Accueil</button>
       <button id="btn-capture" class="btn ghost" title="Enregistrer une image de la vue">Capture</button>
       <button id="btn-help" class="btn ghost">Aide</button>
     </div>
@@ -298,6 +299,39 @@
   </div>
 
   <input type="file" id="file-input" multiple hidden accept=".las,.laz,.e57,.ply,.xyz,.pts,.txt,.csv,.asc,.jpg,.jpeg,.png,.webp" />
+
+  <!-- ============ ACCUEIL (même esprit que l'écran de démarrage de Model Educ Studio) ============ -->
+  <dialog id="welcome" aria-labelledby="welcome-title">
+    <div class="w-grid">
+      <div class="w-pres">
+        <svg viewBox="0 0 120 120" fill="none" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+          <path d="M60 14l38 21v44L60 100 22 79V35z" fill="#e7eef8" stroke="#233a5e" stroke-width="3" stroke-dasharray="0.1 6.4"/>
+          <path d="M22 35l38 21 38-21M60 56v44" stroke="#31507f" stroke-width="3" stroke-dasharray="0.1 6.4"/>
+          <ellipse cx="60" cy="57" rx="46" ry="15" stroke="#c2410c" stroke-width="2.4"/>
+          <circle cx="60" cy="57" r="6.5" fill="#fb923c" stroke="#9a3412" stroke-width="2"/>
+          <path d="M12 108h96" stroke="#c2410c" stroke-width="3"/>
+          <path d="M22 114h76" stroke="#c2410c" stroke-width="2" opacity=".5"/>
+        </svg>
+        <h1 id="welcome-title">Atelier Nuages <span>3D</span></h1>
+        <div class="w-sub">Nuages de points &amp; panoramiques 360°</div>
+        <p>Importe les scans de ta station (<b>LAS, LAZ, E57, PLY, XYZ</b>), regarde-les en 3D et dans leurs <b>panoramiques 360°</b>, mesure, assemble deux scans, nettoie, puis exporte.</p>
+        <p>Tout est calculé dans ton navigateur : <b>aucun fichier n'est envoyé sur Internet</b>.</p>
+        <p><b>Outil pédagogique, pas un logiciel professionnel.</b> Il ne remplace ni ReCap, ni un logiciel de relevé comme Cyclone ou CloudCompare.</p>
+      </div>
+      <div class="w-actions">
+        <h3>Commencer</h3>
+        <button type="button" class="principal" id="w-import"><b>Importer mes fichiers</b><span>LAS, LAZ, E57, PLY, XYZ/PTS et panoramiques JPG/PNG</span></button>
+        <button type="button" id="w-empty"><b>Ouvrir l'atelier vide</b><span>glisser-déposer les fichiers ensuite sur la fenêtre</span></button>
+        <h3>Ouvrir un exemple</h3>
+        <button type="button" id="w-demo"><b>Salle scannée depuis 2 stations</b><span>nuages + panoramiques 360° ; la station 2 est mal recalée : à toi de la corriger</span></button>
+        <h3>Télécharger</h3>
+        <a class="w-dl" href="./exemples/salle-demo-structure.e57" download><b>Jeu d'essai E57 structuré</b><span>2 stations + 2 panoramiques intégrés · environ 2 Mo · à importer ensuite</span></a>
+        <a class="w-dl" href="./exemples/salle-demo-nuage.laz" download><b>Jeu d'essai LAZ</b><span>les deux scans fusionnés, sans station · environ 1,5 Mo</span></a>
+        <a class="w-dl" href="https://github.com/JPA31000/atelier-nuages-3d/archive/refs/heads/main.zip" rel="noopener"><b>Code source (ZIP)</b><span>pour le lire, le modifier ou l'héberger soi-même</span></a>
+        <p class="w-licence">Sur une idée de Jean-Philippe Amat, lycée Urbain Vitry (Toulouse) · Code libre, licence MIT</p>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="help-dialog">
     <form method="dialog">

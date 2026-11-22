@@ -5,7 +5,10 @@
   "type": "module",
   "description": "Atelier web de nuages de points 3D et panoramiques 360° (LAS, LAZ, E57, PLY, XYZ) — 100 % côté navigateur.",
   "scripts": {
+    "samples": "node scripts/make-samples.mjs",
+    "predev": "node scripts/make-samples.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/make-samples.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test \"tests/**/*.test.js\""
