@@ -37,8 +37,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api -X PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow \
-            || echo "::warning title=Réglage de Pages::Impossible de régler la source automatiquement. Faites-le à la main : Settings → Pages → Build and deployment → Source : GitHub Actions."
+          set +e
+          out=$(gh api -X PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow 2>&1); code=$?
+          echo "::notice title=Pages PUT::code=${code} $(echo "$out" | tr '\n' ' ' | cut -c1-300)"
+          cur=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '"build_type=" + .build_type + " branche=" + (.source.branch // "-") + " dossier=" + (.source.path // "-")' 2>&1 | tr '\n' ' ' | cut -c1-300)
+          echo "::notice title=Pages actuel::${cur}"
+          case "$cur" in *build_type=workflow*) ;; *)
+            echo "::warning title=Réglage de Pages::La source n'est pas « GitHub Actions ». Faites-le à la main : Settings → Pages → Build and deployment → Source : GitHub Actions." ;;
+          esac
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
