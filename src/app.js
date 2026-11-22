@@ -504,8 +504,16 @@ export class App {
     $('#w-empty').addEventListener('click', done());
     $('#w-demo').addEventListener('click', done(() => this.loadDemo()));
     $('#btn-home').addEventListener('click', () => { if (!dlg.open) dlg.showModal(); });
+    const show = () => { if (!dlg.open) dlg.showModal(); };
     if (new URLSearchParams(location.search).has('demo')) this.loadDemo();
-    else dlg.showModal();
+    else if (document.getElementById('splash')) window.addEventListener('splash-done', show, { once: true }); // après l'écran de chargement
+    else show();
+  }
+
+  /** Démarre les Workers et charge le décodeur LAZ (WebAssembly) avant le premier import : le premier clic est ensuite immédiat. */
+  async warmUp() {
+    const limit = (p) => Promise.race([p, new Promise((r) => setTimeout(r, 6000))]);
+    await Promise.allSettled([limit(importer.run({ warmup: true })), limit(geo.run({ op: 'warmup', payload: {} }))]);
   }
 
   // ------------------------------------------------------------------ barre de station

@@ -28,7 +28,9 @@ Le rendu utilise WebGL 2 ; WebGPU n'est pas utilisé (voir [limites](#limites-co
 
 ## Page d'accueil et jeux d'essai
 
-Au lancement s'ouvre une **fenêtre d'accueil** (même esprit que l'écran de démarrage de Model Educ Studio : présentation à gauche, actions à droite). Elle propose :
+Au lancement s'affiche d'abord un **écran de chargement** inspiré de celui de Model Educ Studio : fond noir, un scanner qui dépose ses points sur une salle (la part de nuage visible suit le pourcentage), « CHARGEMENT 27 % · VERSION 1.1 », l'encart de la licence CC BY-NC-SA 4.0 avec « Que veut dire cette licence ? » et une barre de progression ([`public/splash.js`](public/splash.js), script classique exécuté avant l'application). Le pourcentage suit de **vraies étapes** (page, module chargé, interface construite, premier rendu 3D, Workers et décodeur LAZ préchauffés) ; l'écran reste au moins 2,8 s à la première visite (0,9 s ensuite) pour laisser lire la licence. Un clic, Entrée ou Échap le passe dès que l'application est prête ; il attend si l'explication de la licence est ouverte. Le numéro de version vient de `package.json`.
+
+Puis s'ouvre une **fenêtre d'accueil** (même esprit que l'écran de démarrage de Model Educ Studio : présentation à gauche, actions à droite). Elle propose :
 
 * **Commencer** : importer ses fichiers, ou ouvrir l'atelier vide ;
 * **Ouvrir un exemple** : la salle de démonstration (2 stations, 2 panoramiques, défaut de recalage à corriger) ;
@@ -130,6 +132,7 @@ src/viewer/                        Three.js (WebGL2) : scène unique rendue dans
 src/io/                            lecteurs (las, e57, ply, xyz), écrivains (las, laz, ply, xyz, zip, rcp), worker d'import
 src/geo/                           KD-tree, Horn, ICP, filtres + worker de calcul (ICP, filtres, exports)
 src/demo/demoScene.js              jeu de démonstration (lancer de rayons)
+public/splash.js                    écran de chargement (animation de scan, étapes réelles, licence)
 scripts/make-samples.mjs            génère les jeux d'essai E57 + LAZ téléchargeables (public/exemples/)
 tests/                             tests Node (node:test) avec générateur E57 de test
 ```
@@ -157,4 +160,6 @@ tests/                             tests Node (node:test) avec générateur E57 
 
 ## Licence
 
-MIT. Dépendances : [three](https://threejs.org) (MIT), [laz-perf](https://github.com/hobuinc/laz-perf) (Apache-2.0), [Vite](https://vitejs.dev) (MIT, outil de build).
+**Creative Commons CC BY-NC-SA 4.0** — libre pour enseigner et apprendre, à trois conditions : citer l'auteur (Jean-Philippe Amat) · pas d'usage commercial · partager les adaptations dans les mêmes conditions. Texte : [`LICENSE`](LICENSE) et <https://creativecommons.org/licenses/by-nc-sa/4.0/deed.fr>. C'est la licence de vos autres outils (Model Educ Studio), reprise sur l'écran de chargement.
+
+Bibliothèques tierces, sous leur propre licence : [three](https://threejs.org) (MIT), [laz-perf](https://github.com/hobuinc/laz-perf) (Apache-2.0), [Vite](https://vitejs.dev) (MIT, outil de build seulement).

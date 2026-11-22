@@ -9,6 +9,8 @@ import { buildRcpPackage } from '../io/rcp.js';
 import { buildDemo } from '../demo/demoScene.js';
 
 const handlers = {
+  warmup() { return { result: true }; }, // le simple démarrage du Worker suffit
+
   demo(params) {
     const d = buildDemo(params);
     const transfer = [];

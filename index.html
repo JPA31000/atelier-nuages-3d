@@ -6,8 +6,65 @@
   <title>Atelier Nuages 3D</title>
   <meta name="description" content="Importer, visualiser, assembler, nettoyer et exporter des nuages de points (LAS, LAZ, E57, PLY, XYZ) avec leurs panoramiques 360°, directement dans le navigateur." />
   <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  <style>
+    /* Écran de chargement (public/splash.js) : masqué tant que le script ne l'active pas, pour ne jamais rester bloqué. */
+    #splash { display: none; position: fixed; inset: 0; z-index: 100; background: #000; color: #f2ede4; overflow: auto;
+      flex-direction: column; align-items: center; justify-content: flex-start; padding: 14px 16px;
+      font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif; transition: opacity .5s ease; }
+    #splash.on { display: flex; }
+    #splash::before, #splash::after { content: ""; flex: 1 0 0; } /* centre le contenu sans le rendre inaccessible quand l'écran est petit */
+    #splash.out { opacity: 0; pointer-events: none; }
+    #splash canvas { width: min(640px, 94vw); aspect-ratio: 16 / 9.6; max-height: 44vh; display: block; flex: 0 1 auto; }
+    #splash h1 { margin: 4px 0 4px; font-size: clamp(24px, 4.2vw, 32px); font-weight: 500; letter-spacing: .02em; text-align: center; }
+    #splash .tag { color: #b9b4ab; font-size: clamp(14px, 2.2vw, 19px); text-align: center; }
+    #splash .state { margin-top: 10px; font-size: 13.5px; letter-spacing: .07em; text-transform: uppercase; color: #a29d94; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center; }
+    #splash .state b { color: #eee; font-weight: 600; display: inline-block; min-width: 3.4em; text-align: left; }
+    #splash .state i { width: 1px; height: 16px; background: #3a3631; }
+    #splash .state[data-slow]::after { content: "Chargement plus long que prévu (connexion lente ?)"; flex-basis: 100%; text-align: center; text-transform: none; letter-spacing: 0; color: #e8a15a; }
+    #splash .state .err { color: #ff8a7a; text-transform: none; letter-spacing: 0; }
+    #splash .licence { margin-top: 16px; max-width: 840px; width: 100%; background: #100b08; border: 1px solid #3f2d1b; border-radius: 12px; padding: 14px 22px 12px; text-align: center; }
+    #splash .licence h2 { margin: 0 0 6px; font-size: clamp(15px, 2.4vw, 18px); font-weight: 600; color: #fff; }
+    #splash .licence h2 b { color: #f4b46c; }
+    #splash .licence p { margin: 0 0 8px; font-size: clamp(13px, 2vw, 16px); line-height: 1.5; color: #dcd6cb; }
+    #splash .licence .credit { font-size: 13px; color: #8f897f; }
+    #splash .lic-btn { background: none; border: 0; padding: 2px 0; cursor: pointer; font: inherit; font-size: 15px; font-weight: 600; color: #f4b46c; text-decoration: underline; text-underline-offset: 3px; }
+    #splash .lic-btn:focus-visible { outline: 2px solid #f4b46c; outline-offset: 3px; }
+    #splash #lic-detail { margin-top: 10px; text-align: left; border-top: 1px solid #3f2d1b; padding-top: 8px; }
+    #splash #lic-detail ul { margin: 0 0 6px; padding-left: 18px; }
+    #splash #lic-detail li, #splash #lic-detail p { font-size: 14px; line-height: 1.5; color: #dcd6cb; margin: 3px 0; }
+    #splash #lic-detail a { color: #f4b46c; }
+    #splash .bar { margin-top: 16px; width: min(316px, 70vw); height: 4px; background: #2a2724; border-radius: 3px; overflow: hidden; flex: none; }
+    #splash .bar i { display: block; height: 100%; width: 0; background: #e8a15a; }
+    #splash .skip { margin: 10px 0 0; font-size: 13px; color: #8f897f; }
+    @media (max-height: 640px) { #splash canvas { max-height: 30vh; } #splash .licence p:not(.credit) { font-size: 13px; } }
+    @media (prefers-reduced-motion: reduce) { #splash { transition: none; } }
+  </style>
 </head>
 <body>
+<div id="splash" role="dialog" aria-label="Chargement d'Atelier Nuages 3D">
+  <canvas aria-hidden="true"></canvas>
+  <h1>Atelier Nuages 3D</h1>
+  <div class="tag">Visualiser, mesurer, assembler, exporter</div>
+  <div class="state" role="status"><span>Chargement <b data-pct>0&#8239;%</b></span><i></i><span>Version __VERSION__</span></div>
+  <div class="licence">
+    <h2>Licence Creative Commons <b>CC BY-NC-SA 4.0</b></h2>
+    <p>Libre pour enseigner et apprendre, à trois conditions : citer l'auteur · pas d'usage commercial · partager les adaptations dans les mêmes conditions.</p>
+    <p class="credit">Sur une idée de : Jean-Philippe Amat | Créateur : Claude | Licence CC BY-NC-SA 4.0</p>
+    <button type="button" class="lic-btn" aria-expanded="false" aria-controls="lic-detail">Que veut dire cette licence ? ›</button>
+    <div id="lic-detail" hidden>
+      <ul>
+        <li><b>BY — Attribution</b> : tu peux réutiliser et modifier l'outil à condition de citer Jean-Philippe Amat et d'indiquer ce que tu as changé.</li>
+        <li><b>NC — Pas d'usage commercial</b> : pas de vente, pas d'utilisation pour gagner de l'argent.</li>
+        <li><b>SA — Partage dans les mêmes conditions</b> : une version modifiée que tu diffuses doit porter la même licence.</li>
+      </ul>
+      <p>Texte officiel : <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.fr" target="_blank" rel="noopener">creativecommons.org</a>. Les bibliothèques three.js (MIT) et laz-perf (Apache-2.0) gardent leur propre licence.</p>
+    </div>
+  </div>
+  <div class="bar" role="progressbar" aria-label="Chargement" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+  <p class="skip" hidden>Prêt — cliquez pour continuer</p>
+</div>
+<script src="./splash.js"></script>
+
 <div id="app">
   <header class="topbar">
     <div class="brand">
@@ -328,7 +385,7 @@
         <a class="w-dl" href="./exemples/salle-demo-structure.e57" download><b>Jeu d'essai E57 structuré</b><span>2 stations + 2 panoramiques intégrés · environ 2 Mo · à importer ensuite</span></a>
         <a class="w-dl" href="./exemples/salle-demo-nuage.laz" download><b>Jeu d'essai LAZ</b><span>les deux scans fusionnés, sans station · environ 1,5 Mo</span></a>
         <a class="w-dl" href="https://github.com/JPA31000/atelier-nuages-3d/archive/refs/heads/main.zip" rel="noopener"><b>Code source (ZIP)</b><span>pour le lire, le modifier ou l'héberger soi-même</span></a>
-        <p class="w-licence">Sur une idée de Jean-Philippe Amat, lycée Urbain Vitry (Toulouse) · Code libre, licence MIT</p>
+        <p class="w-licence">Sur une idée de Jean-Philippe Amat, lycée Urbain Vitry (Toulouse) · Créateur : Claude · Licence CC BY-NC-SA 4.0</p>
       </div>
     </div>
   </dialog>

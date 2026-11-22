@@ -7,7 +7,12 @@ let lazPromise = null;
 const getLazPerf = () => (lazPromise ??= createLazPerf({ locateFile: (f) => (f.endsWith('.wasm') ? lazWasmUrl : f) }));
 
 self.onmessage = async (e) => {
-  const { id, file, opts } = e.data;
+  const { id, file, opts, warmup } = e.data;
+  if (warmup) { // préchauffage : charge le décodeur LAZ ; une erreur ne bloque rien (elle réapparaîtra à l'import d'un LAZ)
+    try { await getLazPerf(); } catch { /* ignoré */ }
+    self.postMessage({ type: 'done', id, result: true });
+    return;
+  }
   try {
     const res = await importFile(file, { ...opts, getLazPerf }, (fraction, label) => {
       self.postMessage({ type: 'progress', id, fraction, label });
